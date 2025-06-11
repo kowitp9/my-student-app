@@ -13,8 +13,8 @@ export interface Student {
   gender: 'ชาย' | 'หญิง';
   birthDate: string; // Stored as YYYY-MM-DD (A.D.)
   phoneNumber?: string;
-  weight?: number | '';
-  height?: number | '';
+  weight: number | ""; // REVISED: Allow empty string for form state
+  height: number | ""; // REVISED: Allow empty string for form state
   bloodGroup: 'ไม่ทราบ' | 'A' | 'B' | 'AB' | 'O';
   ethnicity: string;
   nationality: string;

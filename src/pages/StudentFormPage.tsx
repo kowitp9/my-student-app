@@ -142,6 +142,7 @@ const StudentFormPage: React.FC = () => {
   ];
 
   const initialFormState: Student = {
+    docId: "",
     id: "",
     studentId: "",
     classLevel: "อนุบาล 2",
@@ -199,7 +200,7 @@ const StudentFormPage: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, any>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+
   const [alertState, setAlertState] = useState<{
     isOpen: boolean;
     type: "success" | "error";
@@ -211,7 +212,7 @@ const StudentFormPage: React.FC = () => {
   useEffect(() => {
     if (isEditing) {
       // ถ้ามี students ใน context แล้ว ให้ค้นหาเลย
-      if (students.length > 0 && docId) {
+      if (students.length > 0) {
         const studentToEdit = students.find((s) => s.docId === docId);
         if (studentToEdit) {
           // แปลงชื่อชั้นให้เป็นชื่อเต็มก่อนนำไปใส่ในฟอร์ม
@@ -316,34 +317,20 @@ const StudentFormPage: React.FC = () => {
 
   const handleConfirmSave = async () => {
     setIsModalOpen(false);
-    setIsSaving(true);
-    setAlertState(null);
-
-    const studentToSave = {
+    const studentToSave: Omit<Student, "docId"> = {
       ...formData,
       weight: Number(formData.weight) || 0,
       height: Number(formData.height) || 0,
+      classLevel: formatClassName(formData.classLevel),
     };
-
-    // ลบ docId ออกจาก object ที่จะบันทึก เพราะไม่ใช่ field ใน database
-    if ("docId" in studentToSave) {
-      delete (studentToSave as any).docId;
-    }
+    delete (studentToSave as any).docId;
 
     try {
       if (isEditing && docId) {
         await updateStudent(docId, studentToSave);
-        // เมื่อสำเร็จ ให้ navigate ไปยังหน้า detail
         navigate(`/student/${docId}`, { replace: true });
       } else {
-        const newStudentData = {
-          ...studentToSave,
-          studentId:
-            studentToSave.studentId ||
-            String(Math.floor(1000 + Math.random() * 9000)),
-        };
-        await addStudent(newStudentData);
-        // เมื่อสำเร็จ ให้ navigate ไปยังหน้าหลัก
+        await addStudent(studentToSave);
         navigate("/", { replace: true });
       }
     } catch (error) {
@@ -352,11 +339,9 @@ const StudentFormPage: React.FC = () => {
         isOpen: true,
         type: "error",
         title: "บันทึกข้อมูลไม่สำเร็จ",
-        message: "เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล กรุณาลองใหม่อีกครั้ง",
+        message: "เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล",
       });
-      setIsSaving(false); // หยุด loading เมื่อเกิด error
     }
-    // ไม่ต้องมี setIsSaving(false) ที่นี่ เพราะถ้าสำเร็จจะ navigate ไปแล้ว
   };
   if (isEditing && isLoading) {
     return <Loading />;
@@ -430,7 +415,7 @@ const StudentFormPage: React.FC = () => {
                 >
                   {classLevels.map((level) => (
                     <option key={level} value={level}>
-                      {level}
+                      ชั้น {level}
                     </option>
                   ))}
                 </select>
@@ -447,10 +432,10 @@ const StudentFormPage: React.FC = () => {
                 <select
                   value={formData.title}
                   onChange={(e) =>
-                    setFormData({
-                      ...formData,
+                    setFormData((p) => ({
+                      ...p,
                       title: e.target.value as Student["title"],
-                    })
+                    }))
                   }
                   className="select select-bordered w-full"
                 >
@@ -467,7 +452,7 @@ const StudentFormPage: React.FC = () => {
                   value={formData.titleOther}
                   disabled={formData.title !== "อื่น ๆ"}
                   onChange={(e) =>
-                    setFormData({ ...formData, titleOther: e.target.value })
+                    setFormData((p) => ({ ...p, titleOther: e.target.value }))
                   }
                   placeholder="กรอกคำนำหน้าชื่ออื่นๆ (ถ้ามี)"
                   className="input input-bordered w-full disabled:bg-base-200/70"
@@ -1184,17 +1169,14 @@ const StudentFormPage: React.FC = () => {
           {/* REVISED: เปลี่ยน onClick ให้เป็นการ "ย้อนกลับ" และ disable ปุ่มตอนกำลังบันทึก */}
           <button
             type="button"
-            onClick={() => navigate(-1)} // ใช้ navigate(-1) เพื่อย้อนกลับไปหน้าก่อนหน้า
+            onClick={() => navigate(-1)}
             className="btn btn-ghost"
-            disabled={isSaving}
           >
             ยกเลิก
           </button>
 
-          {/* REVISED: เพิ่มสถานะ loading และ disabled ตอนกำลังบันทึก */}
-          <button type="submit" className="btn btn-primary" disabled={isSaving}>
-            {isSaving && <span className="loading loading-spinner"></span>}
-            {isSaving ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
+          <button type="submit" className="btn btn-primary">
+            บันทึกข้อมูล
           </button>
         </div>
       </form>
